@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>선과 악 - 온라인 멀티플레이어</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1 class="title">선과 악</h1>
+        <p>실시간 멀티플레이어 심리전략 게임</p>
+      </div>
+
+      <!-- 메인 메뉴 -->
+      <div id="mainMenu" class="main-menu">
+        <div class="menu-buttons">
+          <button
+            class="menu-btn menu-btn-primary"
+            onclick="createRoomScreen()"
+          >
+            새 방 만들기
+          </button>
+          <button
+            class="menu-btn menu-btn-secondary"
+            onclick="joinRoomScreen()"
+          >
+            방 참가하기
+          </button>
+        </div>
+        <div class="game-rules">
+          <h3>게임 규칙</h3>
+          <p>
+            <strong>구성:</strong> 천사팀 6명(신1 + 대천사1 + 천사4) vs 악마팀
+            4명(루시퍼1 + 악마3)
+          </p>
+          <p>
+            <strong>진행:</strong> 대표자가 집행자 지목 → 찬성/반대 투표 → 카드
+            선택
+          </p>
+          <p>
+            <strong>승리:</strong> 천사팀(선행 5개) vs 악마팀(악행 5개 또는 신
+            제거)
+          </p>
+        </div>
+      </div>
+
+      <!-- 방 생성 화면 -->
+      <div id="createRoomArea" class="room-setup hidden">
+        <button class="back-btn" onclick="showMainMenu()">← 돌아가기</button>
+        <h2>새 방 만들기</h2>
+        <div class="input-group">
+          <label for="hostName">방장 이름</label>
+          <input
+            type="text"
+            id="hostName"
+            placeholder="이름을 입력하세요"
+            maxlength="10"
+          />
+        </div>
+        <button class="btn btn-primary" onclick="createRoom()">
+          방 만들기
+        </button>
+      </div>
+
+      <!-- 방 참가 화면 -->
+      <div id="joinRoomArea" class="room-setup hidden">
+        <button class="back-btn" onclick="showMainMenu()">← 돌아가기</button>
+        <h2>방 참가하기</h2>
+        <div class="input-group">
+          <label for="playerName">플레이어 이름</label>
+          <input
+            type="text"
+            id="playerName"
+            placeholder="이름을 입력하세요"
+            maxlength="10"
+          />
+        </div>
+        <div class="input-group">
+          <label for="roomCodeInput">방 코드</label>
+          <input
+            type="text"
+            id="roomCodeInput"
+            placeholder="6자리 방 코드를 입력하세요"
+            maxlength="6"
+            style="text-transform: uppercase"
+          />
+        </div>
+        <button class="btn btn-primary" onclick="joinRoomByCode()">
+          방 코드로 참가
+        </button>
+        <div style="text-align: center; margin: 20px 0; opacity: 0.7">
+          <span>또는</span>
+        </div>
+        <button class="btn btn-secondary" onclick="refreshRoomList()">
+          방 목록 새로고침
+        </button>
+        <div id="roomList" class="room-list">
+          <div style="text-align: center; opacity: 0.7">
+            방 목록을 불러오는 중...
+          </div>
+        </div>
+      </div>
+
+      <!-- 대기 화면 -->
+      <div id="waitingArea" class="waiting-screen hidden">
+        <div class="loading">🎮 플레이어들을 기다리는 중...</div>
+        <div id="playerCount">0/10 명</div>
+        <div style="margin-top: 20px">
+          <div>
+            방 코드: <span id="roomCode" class="room-code-display">-</span>
+          </div>
+          <div style="margin-top: 10px; opacity: 0.8">
+            10명이 모이면 자동으로 게임이 시작됩니다!
+          </div>
+          <div style="margin-top: 15px"><span id="hostInfo"></span></div>
+        </div>
+        <button
+          class="btn btn-secondary"
+          onclick="leaveRoom()"
+          style="margin-top: 20px"
+        >
+          방 나가기
+        </button>
+      </div>
+
+      <!-- 게임 진행 화면 -->
+      <div id="gameArea" class="game-area">
+        <div class="game-info">
+          <div class="info-card">
+            <h3>라운드</h3>
+            <div id="currentRound">1</div>
+          </div>
+          <div class="info-card">
+            <h3>남은 시간</h3>
+            <div id="timer" class="timer">5:00</div>
+          </div>
+          <div class="info-card">
+            <h3>선행 카드</h3>
+            <div style="color: #ffd700; font-size: 1.5em">
+              ✨ <span id="goodDeeds">0</span>/5
+            </div>
+          </div>
+          <div class="info-card">
+            <h3>악행 카드</h3>
+            <div style="color: #ff4757; font-size: 1.5em">
+              💀 <span id="evilDeeds">0</span>/5
+            </div>
+          </div>
+        </div>
+
+        <div class="turn-order-section">
+          <h3>대표자 순서 및 진행 상황</h3>
+          <div id="turnOrderDisplay" class="turn-order-display">
+            <!-- JavaScript로 동적 생성 -->
+          </div>
+        </div>
+
+        <div class="role-section">
+          <div id="roleInfo" class="role-card">
+            <h3>당신의 역할</h3>
+            <div id="roleName" style="font-size: 1.5em; margin: 10px 0">-</div>
+            <div id="roleDescription" style="opacity: 0.9">-</div>
+            <div id="knownAllies" class="known-players hidden">
+              <h4>알고 있는 동료</h4>
+              <div id="alliesList"></div>
+            </div>
+          </div>
+          <div class="role-card">
+            <h3>공개된 정보</h3>
+            <div id="revealedInfo">
+              <div>아직 공개된 정보가 없습니다.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="courtroom">
+          <h3>재판장</h3>
+          <div id="courtroomCards" class="cards-display"></div>
+          <div id="courtroomStatus">게임 준비 중...</div>
+        </div>
+
+        <div id="gameStatus" class="game-status">게임 준비 중...</div>
+
+        <div id="actionArea" class="voting-area hidden">
+          <h3 id="actionTitle">대기중</h3>
+          <div id="actionDescription">-</div>
+          <div id="playersGrid" class="players-grid"></div>
+          <div id="cardSelection" class="cards-display hidden"></div>
+          <div style="text-align: center; margin-top: 15px">
+            <button
+              id="actionButton"
+              class="btn btn-success hidden"
+              onclick="performAction()"
+            >
+              확인
+            </button>
+            <button
+              id="approveButton"
+              class="btn btn-success hidden"
+              onclick="vote(true)"
+            >
+              👍 찬성
+            </button>
+            <button
+              id="rejectButton"
+              class="btn btn-danger hidden"
+              onclick="vote(false)"
+            >
+              👎 반대
+            </button>
+          </div>
+        </div>
+
+        <div class="chat-area" id="chatArea">
+          <div id="chatMessages"></div>
+        </div>
+        <div class="chat-input">
+          <input
+            type="text"
+            id="chatInput"
+            placeholder="메시지를 입력하세요..."
+            maxlength="100"
+          />
+          <button class="btn btn-primary" onclick="sendMessage()">전송</button>
+        </div>
+      </div>
+
+      <!-- 게임 결과 화면 -->
+      <div id="gameResultArea" class="game-result hidden">
+        <div class="result-header">
+          <div id="winnerAnnouncement" class="winner-announcement">
+            🎉 천사팀 승리! 🎉
+          </div>
+          <div id="resultReason" class="result-reason">
+            5개의 선행을 달성했습니다!
+          </div>
+        </div>
+        <div id="gameStatsGrid" class="game-stats">
+          <div class="stat-card">
+            <div class="stat-number" id="statRounds">0</div>
+            <div>총 라운드</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statGoodDeeds">0</div>
+            <div>선행 카드</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statEvilDeeds">0</div>
+            <div>악행 카드</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statKilled">0</div>
+            <div>제거된 플레이어</div>
+          </div>
+        </div>
+        <div class="player-roles">
+          <h3>모든 플레이어의 정체</h3>
+          <div id="playerRolesList" class="roles-grid"></div>
+        </div>
+        <div class="result-actions">
+          <button class="btn btn-primary" onclick="showMainMenu()">
+            메인 메뉴로
+          </button>
+          <button class="btn btn-success" onclick="createNewRoom()">
+            새 게임 시작
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/client.js"></script>
+  </body>
+</html>
